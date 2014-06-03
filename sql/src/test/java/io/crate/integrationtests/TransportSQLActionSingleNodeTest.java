@@ -136,4 +136,34 @@ public class TransportSQLActionSingleNodeTest extends SQLTransportIntegrationTes
         assertEquals("t| 04132\n", TestingHelpers.printedTable(response.rows()));
     }
 
+    // TODO: this is probably the wrong place to test the invalidation, it is merely a consolidation of different commands for debug purposes. the whole :sql:test suite should be sufficient?
+    @Test
+    public void testInvalidateMetaData() throws Exception {
+        execute("CREATE TABLE t1 (id int, content string) WITH (number_of_replicas=0)");
+        execute("CREATE TABLE t2 (id int, content string) WITH (number_of_replicas=0)");
+        execute("CREATE TABLE t3 (id int, content string) WITH (number_of_replicas=0)");
+        ensureGreen();
+        execute("INSERT INTO t1 (content) VALUES ('some content')");
+        ensureGreen();
+        // create new column and change mapping implicitly
+        execute("INSERT INTO t1 (more_content) VALUES ('some more content which invalidates the meta data')");
+        ensureGreen();
+        execute("CREATE TABLE t4 (content string) PARTITIONED BY (content) WITH (number_of_replicas=0)");
+        ensureGreen();
+        execute("INSERT INTO t4 VALUES ('partition1')");
+        ensureGreen();
+        execute("INSERT INTO t4 VALUES ('partition2')");
+        ensureGreen();
+        execute("DROP TABLE t2");
+        ensureGreen();
+        execute("DROP TABLE t4");
+        ensureGreen();
+        execute("CREATE TABLE t4 (content string) PARTITIONED BY (content) WITH (number_of_replicas=0)");
+        ensureGreen();
+        execute("INSERT INTO t4 VALUES ('partition1')");
+        ensureGreen();
+        execute("INSERT INTO t4 VALUES ('partition2')");
+        ensureGreen();
+    }
+
 }
